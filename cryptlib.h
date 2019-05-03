@@ -3,7 +3,7 @@
 /// \file cryptlib.h
 /// \brief Abstract base classes that provide a uniform interface to this library.
 
-/*!	\mainpage Crypto++ Library 7.1 API Reference
+/*!	\mainpage Crypto++ Library 8.3 API Reference
 <dl>
 <dt>Abstract Base Classes<dd>
 	cryptlib.h
@@ -17,29 +17,31 @@
 	\ref SHACAL2 "SHACAL-2", SHARK, \ref SIMECK64 "SIMECK (32/64)" SKIPJACK, SM4, Square, TEA,
 	\ref ThreeWay "3-Way", \ref Threefish256 "Threefish (256/512/1024)", Twofish, XTEA
 <dt>Stream Ciphers<dd>
-	ChaCha (ChaCha-8/12/20), \ref HC128 "HC-128/256", \ref Panama "Panama-LE", \ref Panama "Panama-BE",
+	\ref ChaCha "ChaCha (8/12/20)", \ref HC128 "HC-128/256", \ref Panama "Panama-LE", \ref Panama "Panama-BE",
 	Rabbit, Salsa20, \ref SEAL "SEAL-LE", \ref SEAL "SEAL-BE", WAKE, XSalsa20
 <dt>Hash Functions<dd>
 	BLAKE2s, BLAKE2b, \ref Keccak "Keccak (F1600)", SHA1, SHA224, SHA256, SHA384, SHA512,
 	\ref SHA3 "SHA-3", SM3, Tiger, RIPEMD160, RIPEMD320, RIPEMD128, RIPEMD256, SipHash, Whirlpool,
 	Weak::MD2, Weak::MD4, Weak::MD5
 <dt>Non-Cryptographic Checksums<dd>
-	CRC32, Adler32
+	CRC32, CRC32C, Adler32
 <dt>Message Authentication Codes<dd>
 	BLAKE2b, BLAKE2s, CBC_MAC, CMAC, DMAC, \ref GCM "GCM (GMAC)", HMAC, Poly1305, TTMAC, VMAC
 <dt>Random Number Generators<dd>
-	NullRNG(), LC_RNG, RandomPool, BlockingRng, NonblockingRng, AutoSeededRandomPool, AutoSeededX917RNG,
-	NIST Hash_DRBG and HMAC_DRBG, \ref MersenneTwister "MersenneTwister (MT19937 and MT19937-AR)", RDRAND, RDSEED
+	NullRNG, LC_RNG, RandomPool, BlockingRng, NonblockingRng, AutoSeededRandomPool, AutoSeededX917RNG,
+	NIST Hash_DRBG and HMAC_DRBG, \ref MersenneTwister "MersenneTwister (MT19937 and MT19937-AR)",
+	DARN, RDRAND, RDSEED
 <dt>Key Derivation and Password-based Cryptography<dd>
 	HKDF, \ref PKCS12_PBKDF "PBKDF (PKCS #12)", \ref PKCS5_PBKDF1 "PBKDF-1 (PKCS #5)",
 	\ref PKCS5_PBKDF2_HMAC "PBKDF-2/HMAC (PKCS #5)"
 <dt>Public Key Cryptosystems<dd>
 	DLIES, ECIES, LUCES, RSAES, RabinES, LUC_IES
 <dt>Public Key Signature Schemes<dd>
-	DSA2, GDSA, ECDSA, NR, ECNR, LUCSS, RSASS, RSASS_ISO, RabinSS, RWSS, ESIGN
+	DSA, DSA2, \ref ed25519 "Ed25519", GDSA, ECDSA, NR, ECNR, LUCSS, RSASS, RSASS_ISO,
+	RabinSS, RWSS, ESIGN
 <dt>Key Agreement<dd>
-	DH, DH2, \ref MQV_Domain "MQV", \ref HMQV_Domain "HMQV", \ref FHMQV_Domain "FHMQV", ECDH, ECMQV, ECHMQV,
-	ECFHMQV, XTR_DH
+	DH, DH2, \ref x25519 "X25519", \ref MQV_Domain "MQV", \ref HMQV_Domain "HMQV",
+    \ref FHMQV_Domain "FHMQV", ECDH, x25519, ECMQV, ECHMQV, ECFHMQV, XTR_DH
 <dt>Algebraic Structures<dd>
 	Integer, PolynomialMod2, PolynomialOver, RingOfPolynomialsOver,
 	ModularArithmetic, MontgomeryRepresentation, GFP2_ONB, GF2NP, GF256, GF2_32, EC2N, ECP
@@ -468,63 +470,39 @@ public:
 	CRYPTOPP_DLL virtual bool GetVoidValue(const char *name, const std::type_info &valueType, void *pValue) const =0;
 };
 
-/// \brief Interface for retrieving values given their names
-/// \details This class is used when no names or values are present. Typically a program uses
-///   g_nullNameValuePairs rather than creating its own NullNameValuePairs object.
-/// \details NullNameValuePairs always existed in cryptlib.cpp. Crypto++ 6.0 moved NullNameValuePairs
-///   into the header. This allowed the library to define g_nullNameValuePairs in the header rather
-///   than declaring it as extern and placing the definition in the source file. As an external definition
-///   the string g_nullNameValuePairs was subject to static initialization order fiasco problems.
-/// \sa NameValuePairs, g_nullNameValuePairs,
-///   <A HREF="http://www.cryptopp.com/wiki/NameValuePairs">NameValuePairs</A> on the Crypto++ wiki
-class NullNameValuePairs : public NameValuePairs
-{
-public:
-	NullNameValuePairs() {}    //  Clang complains a default ctor must be avilable
-	bool GetVoidValue(const char *name, const std::type_info &valueType, void *pValue) const
-		{CRYPTOPP_UNUSED(name); CRYPTOPP_UNUSED(valueType); CRYPTOPP_UNUSED(pValue); return false;}
-};
-
-// More static initialization order fiasco workarounds. These definitions cannot be extern and
-// cannot be static class members because they require a single definition in a source file.
-// User programs should use g_nullNameValuePairs rather than s_nullNameValuePairs.
-static const NullNameValuePairs s_nullNameValuePairs;
-
 // Doxygen cannot handle initialization
 #if CRYPTOPP_DOXYGEN_PROCESSING
 /// \brief Default channel for BufferedTransformation
 /// \details DEFAULT_CHANNEL is equal to an empty string
-/// \details Crypto++ 6.0 placed DEFAULT_CHANNEL in the header, rather than declaring it as extern and
-///   placing the definition in the source file. As an external definition the string DEFAULT_CHANNEL
-///   was subject to static initialization order fiasco problems.
+/// \details The definition for DEFAULT_CHANNEL is in <tt>cryptlib.cpp</tt>.
+///   It can be subject to <A HREF="https://isocpp.org/wiki/faq/ctors">Static
+///   Initialization Order Fiasco</A>. If you experience a crash in
+///   DEFAULT_CHANNEL where the string object is NULL, then you probably have
+///   a global object using DEFAULT_CHANNEL before it has been constructed.
 const std::string DEFAULT_CHANNEL;
 
 /// \brief Channel for additional authenticated data
 /// \details AAD_CHANNEL is equal to "AAD"
-/// \details Crypto++ 6.0 placed AAD_CHANNEL in the header, rather than declaring it as extern and
-///   placing the definition in the source file. As an external definition the string AAD_CHANNEL
-///   was subject to static initialization order fiasco problems.
+/// \details The definition for AAD_CHANNEL is in <tt>cryptlib.cpp</tt>.
+///   It can be subject to <A HREF="https://isocpp.org/wiki/faq/ctors">Static
+///   Initialization Order Fiasco</A>. If you experience a crash in
+///   AAD_CHANNEL where the string object is NULL, then you probably have a
+///   global object using AAD_CHANNEL before it has been constructed.
 const std::string AAD_CHANNEL;
 
 /// \brief An empty set of name-value pairs
-/// \details Crypto++ 6.0 placed g_nullNameValuePairs in the header, rather than declaring it as extern
-///   and placing the definition in the source file. As an external definition the g_nullNameValuePairs
-///   was subject to static initialization order fiasco problems.
-const NameValuePairs g_nullNameValuePairs;
+/// \details The definition for g_nullNameValuePairs is in <tt>cryptlib.cpp</tt>.
+///   It can be subject to <A HREF="https://isocpp.org/wiki/faq/ctors">Static
+///   Initialization Order Fiasco</A>. If you experience a crash in
+///   g_nullNameValuePairs where the string object is NULL, then you probably
+///   have a global object using g_nullNameValuePairs before it has been
+///   constructed.
+const NameValuePairs& g_nullNameValuePairs;
 
-// Sun Studio 12.3 and earlier can't handle NameValuePairs initialization
-#elif defined(__SUNPRO_CC) && (__SUNPRO_CC < 0x5130)
-static const std::string DEFAULT_CHANNEL;
-static const std::string AAD_CHANNEL = "AAD";
-static const NameValuePairs& g_nullNameValuePairs = s_nullNameValuePairs;
-
-// We don't really want static here since it detracts from public symbol visibility, but the Windows
-// DLL fails to compile when the symbols are only const. Apparently Microsoft compilers don't treat
-// const the same as static in a translation unit for visibility under C++.
 #else
-static const std::string DEFAULT_CHANNEL;
-static const std::string AAD_CHANNEL("AAD");
-static const NameValuePairs& g_nullNameValuePairs(s_nullNameValuePairs);
+extern CRYPTOPP_DLL const std::string DEFAULT_CHANNEL;
+extern CRYPTOPP_DLL const std::string AAD_CHANNEL;
+extern CRYPTOPP_DLL const NameValuePairs& g_nullNameValuePairs;
 #endif
 
 // Document additional name spaces which show up elsewhere in the sources.
@@ -626,7 +604,7 @@ public:
 	///    dominant one. For example on x86 <tt>AES/GCM</tt> returns "AESNI" rather than
 	///    "CLMUL" or "AES+SSE4.1" or "AES+CLMUL" or "AES+SSE4.1+CLMUL".
 	/// \note Provider is not universally implemented yet.
-	/// \since Crypto++ 7.1
+	/// \since Crypto++ 8.0
 	virtual std::string AlgorithmProvider() const {return "C++";}
 };
 
@@ -1151,9 +1129,11 @@ public:
 	unsigned int TagSize() const {return DigestSize();}
 
 	/// \brief Provides the block size of the compression function
-	/// \return the block size of the compression function, in bytes
-	/// \details BlockSize() will return 0 if the hash is not block based. For example,
-	///   SHA3 is a recursive hash (not an iterative hash), and it does not have a block size.
+	/// \return block size of the compression function, in bytes
+	/// \details BlockSize() will return 0 if the hash is not block based
+	///   or does not have an equivalent block size. For example, Keccak
+	///   and SHA-3 do not have a block size, but they do have an equivalent
+	///   block size called rate expressed as <tt>r</tt>.
 	virtual unsigned int BlockSize() const {return 0;}
 
 	/// \brief Provides the input block size most efficient for this hash.
@@ -1323,31 +1303,63 @@ public:
 	/// \brief Provides the maximum length of AAD that can be input
 	/// \return the maximum length of AAD that can be input before the encrypted data
 	virtual lword MaxHeaderLength() const =0;
+
 	/// \brief Provides the maximum length of encrypted data
 	/// \return the maximum length of encrypted data
 	virtual lword MaxMessageLength() const =0;
+
 	/// \brief Provides the the maximum length of AAD
 	/// \return the maximum length of AAD that can be input after the encrypted data
 	virtual lword MaxFooterLength() const {return 0;}
+
 	/// \brief Determines if data lengths must be specified prior to inputting data
 	/// \return true if the data lengths are required before inputting data, false otherwise
 	/// \details if this function returns true, SpecifyDataLengths() must be called before attempting to input data.
 	///   This is the case for some schemes, such as CCM.
 	/// \sa SpecifyDataLengths()
 	virtual bool NeedsPrespecifiedDataLengths() const {return false;}
-	/// \brief Prespecifies the data lengths
-	/// \details this function only needs to be called if NeedsPrespecifiedDataLengths() returns true
+
+	/// \brief Prescribes the data lengths
+	/// \param headerLength size of data before message is input, in bytes
+	/// \param messageLength size of the message, in bytes
+	/// \param footerLength size of data after message is input, in bytes
+	/// \details SpecifyDataLengths() only needs to be called if NeedsPrespecifiedDataLengths() returns <tt>true</tt>.
+	///   If <tt>true</tt>, then <tt>headerLength</tt> will be validated against <tt>MaxHeaderLength()</tt>,
+	///   <tt>messageLength</tt> will be validated against <tt>MaxMessageLength()</tt>, and
+	///   <tt>footerLength</tt> will be validated against <tt>MaxFooterLength()</tt>.
 	/// \sa NeedsPrespecifiedDataLengths()
 	void SpecifyDataLengths(lword headerLength, lword messageLength, lword footerLength=0);
+
 	/// \brief Encrypts and calculates a MAC in one call
-	/// \details EncryptAndAuthenticate() encrypts and generates the MAC in one call. The function will truncate MAC if
-	///   <tt>macSize < TagSize()</tt>.
+	/// \param ciphertext the encryption buffer
+	/// \param mac the mac buffer
+	/// \param macSize the size of the MAC buffer, in bytes
+	/// \param iv the iv buffer
+	/// \param ivLength the size of the IV buffer, in bytes
+	/// \param header the AAD buffer
+	/// \param headerLength the size of the AAD buffer, in bytes
+	/// \param message the message buffer
+	/// \param messageLength the size of the messagetext buffer, in bytes
+	/// \details EncryptAndAuthenticate() encrypts and generates the MAC in one call. The function
+	///   truncates the MAC if <tt>macSize < TagSize()</tt>.
 	virtual void EncryptAndAuthenticate(byte *ciphertext, byte *mac, size_t macSize, const byte *iv, int ivLength, const byte *header, size_t headerLength, const byte *message, size_t messageLength);
+
 	/// \brief Decrypts and verifies a MAC in one call
+	/// \param message the decryption buffer
+	/// \param mac the mac buffer
+	/// \param macSize the size of the MAC buffer, in bytes
+	/// \param iv the iv buffer
+	/// \param ivLength the size of the IV buffer, in bytes
+	/// \param header the AAD buffer
+	/// \param headerLength the size of the AAD buffer, in bytes
+	/// \param ciphertext the ciphertext buffer
+	/// \param ciphertextLength the size of the ciphertext buffer, in bytes
 	/// \return true if the MAC is valid and the decoding succeeded, false otherwise
-	/// \details DecryptAndVerify() decrypts and verifies the MAC in one call. The function returns true iff MAC is valid.
-	///   DecryptAndVerify() will assume MAC is truncated if <tt>macLength < TagSize()</tt>.
-	virtual bool DecryptAndVerify(byte *message, const byte *mac, size_t macLength, const byte *iv, int ivLength, const byte *header, size_t headerLength, const byte *ciphertext, size_t ciphertextLength);
+	/// \details DecryptAndVerify() decrypts and verifies the MAC in one call.
+	/// <tt>message</tt> is a decryption buffer and should be at least as large as the ciphertext buffer.
+	/// \details The function returns true iff MAC is valid. DecryptAndVerify() assumes the MAC
+	///  is truncated if <tt>macLength < TagSize()</tt>.
+	virtual bool DecryptAndVerify(byte *message, const byte *mac, size_t macSize, const byte *iv, int ivLength, const byte *header, size_t headerLength, const byte *ciphertext, size_t ciphertextLength);
 
 	/// \brief Provides the name of this algorithm
 	/// \return the standard algorithm name

@@ -13,8 +13,9 @@
 #include "words.h"
 #include "misc.h"
 #include "gf2n.h"
-#include "asn.h"
 #include "oids.h"
+#include "asn.h"
+#include "cpu.h"
 
 #include <iostream>
 
@@ -31,11 +32,30 @@ using CryptoPP::PolynomialMod2;
   const PolynomialMod2 g_zero;
   const PolynomialMod2 g_one(1);
   #pragma warning(default: 4075)
+#elif defined(HAVE_XLC_INIT_PRIORITY)
+  #pragma priority(290)
+  const PolynomialMod2 g_zero;
+  const PolynomialMod2 g_one(1);
 #endif
 
 ANONYMOUS_NAMESPACE_END
 
 NAMESPACE_BEGIN(CryptoPP)
+
+#if (CRYPTOPP_CLMUL_AVAILABLE)
+extern CRYPTOPP_DLL void GF2NT_233_Multiply_Reduce_CLMUL(const word* pA, const word* pB, word* pC);
+extern CRYPTOPP_DLL void GF2NT_233_Square_Reduce_CLMUL(const word* pA, word* pC);
+#endif
+
+#if (CRYPTOPP_ARM_PMULL_AVAILABLE)
+extern void GF2NT_233_Multiply_Reduce_ARMv8(const word* pA, const word* pB, word* pC);
+extern void GF2NT_233_Square_Reduce_ARMv8(const word* pA, word* pC);
+#endif
+
+#if (CRYPTOPP_POWER8_VMULL_AVAILABLE)
+extern void GF2NT_233_Multiply_Reduce_POWER8(const word* pA, const word* pB, word* pC);
+extern void GF2NT_233_Square_Reduce_POWER8(const word* pA, word* pC);
+#endif
 
 PolynomialMod2::PolynomialMod2()
 {
@@ -71,7 +91,7 @@ void PolynomialMod2::Randomize(RandomNumberGenerator &rng, size_t nbits)
 PolynomialMod2 PolynomialMod2::AllOnes(size_t bitLength)
 {
 	PolynomialMod2 result((word)0, bitLength);
-	SetWords(result.reg, word(SIZE_MAX), result.reg.size());
+	SetWords(result.reg, ~(word(0)), result.reg.size());
 	if (bitLength%WORD_BITS)
 		result.reg[result.reg.size()-1] = (word)Crop(result.reg[result.reg.size()-1], bitLength%WORD_BITS);
 	return result;
@@ -144,7 +164,7 @@ struct NewPolynomialMod2
 
 const PolynomialMod2 &PolynomialMod2::Zero()
 {
-#if defined(HAVE_GCC_INIT_PRIORITY) || defined(HAVE_MSC_INIT_PRIORITY)
+#if defined(HAVE_GCC_INIT_PRIORITY) || defined(HAVE_MSC_INIT_PRIORITY) || defined(HAVE_XLC_INIT_PRIORITY)
 	return g_zero;
 #elif defined(CRYPTOPP_CXX11_DYNAMIC_INIT)
 	static const PolynomialMod2 g_zero;
@@ -156,7 +176,7 @@ const PolynomialMod2 &PolynomialMod2::Zero()
 
 const PolynomialMod2 &PolynomialMod2::One()
 {
-#if defined(HAVE_GCC_INIT_PRIORITY) || defined(HAVE_MSC_INIT_PRIORITY)
+#if defined(HAVE_GCC_INIT_PRIORITY) || defined(HAVE_MSC_INIT_PRIORITY) || defined(HAVE_XLC_INIT_PRIORITY)
 	return g_one;
 #elif defined(CRYPTOPP_CXX11_DYNAMIC_INIT)
 	static const PolynomialMod2 g_one(1);
@@ -937,6 +957,112 @@ GF2NP * BERDecodeGF2NP(BufferedTransformation &bt)
 	seq.MessageEnd();
 
 	return result.release();
+}
+
+// ********************************************************
+
+GF2NT233::GF2NT233(unsigned int c0, unsigned int c1, unsigned int c2)
+	: GF2NT(c0, c1, c2)
+{
+	CRYPTOPP_ASSERT(c0 > c1 && c1 > c2 && c2==0);
+}
+
+const GF2NT::Element& GF2NT233::Multiply(const Element &a, const Element &b) const
+{
+#if (CRYPTOPP_CLMUL_AVAILABLE)
+	if (HasCLMUL())
+	{
+		CRYPTOPP_ASSERT(a.reg.size()*WORD_BITS == 256);
+		CRYPTOPP_ASSERT(b.reg.size()*WORD_BITS == 256);
+		CRYPTOPP_ASSERT(result.reg.size()*WORD_BITS == 256);
+
+		const word* pA = a.reg.begin();
+		const word* pB = b.reg.begin();
+		word* pR = result.reg.begin();
+
+		GF2NT_233_Multiply_Reduce_CLMUL(pA, pB, pR);
+		return result;
+	}
+	else
+#elif (CRYPTOPP_ARM_PMULL_AVAILABLE)
+	if (HasPMULL())
+	{
+		CRYPTOPP_ASSERT(a.reg.size()*WORD_BITS == 256);
+		CRYPTOPP_ASSERT(b.reg.size()*WORD_BITS == 256);
+		CRYPTOPP_ASSERT(result.reg.size()*WORD_BITS == 256);
+
+		const word* pA = a.reg.begin();
+		const word* pB = b.reg.begin();
+		word* pR = result.reg.begin();
+
+		GF2NT_233_Multiply_Reduce_ARMv8(pA, pB, pR);
+		return result;
+	}
+	else
+#elif (CRYPTOPP_POWER8_VMULL_AVAILABLE)
+	if (HasPMULL())
+	{
+		CRYPTOPP_ASSERT(a.reg.size()*WORD_BITS == 256);
+		CRYPTOPP_ASSERT(b.reg.size()*WORD_BITS == 256);
+		CRYPTOPP_ASSERT(result.reg.size()*WORD_BITS == 256);
+
+		const word* pA = a.reg.begin();
+		const word* pB = b.reg.begin();
+		word* pR = result.reg.begin();
+
+		GF2NT_233_Multiply_Reduce_POWER8(pA, pB, pR);
+		return result;
+	}
+	else
+#endif
+
+	return GF2NT::Multiply(a, b);
+}
+
+const GF2NT::Element& GF2NT233::Square(const Element &a) const
+{
+#if (CRYPTOPP_CLMUL_AVAILABLE)
+	if (HasCLMUL())
+	{
+		CRYPTOPP_ASSERT(a.reg.size()*WORD_BITS == 256);
+		CRYPTOPP_ASSERT(result.reg.size()*WORD_BITS == 256);
+
+		const word* pA = a.reg.begin();
+		word* pR = result.reg.begin();
+
+		GF2NT_233_Square_Reduce_CLMUL(pA, pR);
+		return result;
+	}
+	else
+#elif (CRYPTOPP_ARM_PMULL_AVAILABLE)
+	if (HasPMULL())
+	{
+		CRYPTOPP_ASSERT(a.reg.size()*WORD_BITS == 256);
+		CRYPTOPP_ASSERT(result.reg.size()*WORD_BITS == 256);
+
+		const word* pA = a.reg.begin();
+		word* pR = result.reg.begin();
+
+		GF2NT_233_Square_Reduce_ARMv8(pA, pR);
+		return result;
+	}
+	else
+#elif (CRYPTOPP_POWER8_VMULL_AVAILABLE)
+	if (HasPMULL())
+	{
+		CRYPTOPP_ASSERT(a.reg.size()*WORD_BITS == 256);
+		CRYPTOPP_ASSERT(result.reg.size()*WORD_BITS == 256);
+
+		const word* pA = a.reg.begin();
+		word* pR = result.reg.begin();
+
+		GF2NT_233_Square_Reduce_POWER8(pA, pR);
+		return result;
+	}
+	else
+#endif
+
+	return GF2NT::Square(a);
 }
 
 NAMESPACE_END

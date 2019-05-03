@@ -26,6 +26,18 @@
 # undef CRYPTOPP_SSSE3_ASM_AVAILABLE
 #endif
 
+ANONYMOUS_NAMESPACE_BEGIN
+
+// Can't use GetAlignmentOf<word32>() because of C++11 and constexpr
+// Can use 'const unsigned int' because of MSVC 2013
+#if (CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X64)
+# define ALIGN_SPEC 16
+#else
+# define ALIGN_SPEC 4
+#endif
+
+ANONYMOUS_NAMESPACE_END
+
 NAMESPACE_BEGIN(CryptoPP)
 
 #if defined(CRYPTOPP_DEBUG) && !defined(CRYPTOPP_DOXYGEN_PROCESSING)
@@ -41,7 +53,7 @@ void Salsa20_Core(word32* data, unsigned int rounds)
 	CRYPTOPP_ASSERT(data != NULLPTR);
 	CRYPTOPP_ASSERT(rounds % 2 == 0);
 
-	CRYPTOPP_ALIGN_DATA(16) word32 x[16];
+	CRYPTOPP_ALIGN_DATA(ALIGN_SPEC) word32 x[16];
 
 	for (size_t i = 0; i < 16; ++i)
 		x[i] = data[i];
@@ -90,9 +102,15 @@ void Salsa20_Core(word32* data, unsigned int rounds)
 		x[15] ^= rotlConstant<18>(x[14]+x[13]);
 	}
 
+// OpenMP 4.0 released July 2013.
+#if _OPENMP >= 201307
 	#pragma omp simd
 	for (size_t i = 0; i < 16; ++i)
 		data[i] += x[i];
+#else
+	for (size_t i = 0; i < 16; ++i)
+		data[i] += x[i];
+#endif
 }
 
 std::string Salsa20_Policy::AlgorithmProvider() const
@@ -106,10 +124,13 @@ std::string Salsa20_Policy::AlgorithmProvider() const
 
 void Salsa20_Policy::CipherSetKey(const NameValuePairs &params, const byte *key, size_t length)
 {
-	m_rounds = params.GetIntValueWithDefault(Name::Rounds(), 20);
+	// Use previous rounds as the default value
+	int rounds = params.GetIntValueWithDefault(Name::Rounds(), m_rounds);
+	if (rounds != 20 && rounds != 12 && rounds != 8)
+		throw InvalidRounds(Salsa20::StaticAlgorithmName(), rounds);
 
-	if (!(m_rounds == 8 || m_rounds == 12 || m_rounds == 20))
-		throw InvalidRounds(Salsa20::StaticAlgorithmName(), m_rounds);
+	// Latch a good value
+	m_rounds = rounds;
 
 	// m_state is reordered for SSE2
 	GetBlock<word32, LittleEndian> get1(key);
@@ -686,8 +707,7 @@ Salsa20_OperateKeystream ENDP
 
 void XSalsa20_Policy::CipherSetKey(const NameValuePairs &params, const byte *key, size_t length)
 {
-	m_rounds = params.GetIntValueWithDefault(Name::Rounds(), 20);
-
+	m_rounds = params.GetIntValueWithDefault(Name::Rounds(), m_rounds);
 	if (!(m_rounds == 8 || m_rounds == 12 || m_rounds == 20))
 		throw InvalidRounds(XSalsa20::StaticAlgorithmName(), m_rounds);
 

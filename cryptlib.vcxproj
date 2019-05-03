@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Microsoft documentation for VCXPROJ file format is located at -->
   <!-- the following URL. The documentation leaves a lot to be desired. -->
@@ -198,6 +198,7 @@
       <ExcludedFromBuild Condition=" '$(PlatformToolset)' == 'v100' Or '$(PlatformToolset)' == 'v110' ">true</ExcludedFromBuild>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
+    <ClCompile Include="chachapoly.cpp" />
     <ClCompile Include="cham.cpp" />
     <ClCompile Include="cham_simd.cpp" />
     <ClCompile Include="channels.cpp" />
@@ -213,6 +214,9 @@
     <ClCompile Include="dll.cpp">
       <PrecompiledHeader />
     </ClCompile>
+    <ClCompile Include="donna_32.cpp" />
+    <ClCompile Include="donna_64.cpp" />
+    <ClCompile Include="donna_sse.cpp" />
     <ClCompile Include="dsa.cpp" />
     <ClCompile Include="eax.cpp" />
     <ClCompile Include="ec2n.cpp" />
@@ -235,6 +239,7 @@
     <ClCompile Include="gf256.cpp" />
     <ClCompile Include="gf2_32.cpp" />
     <ClCompile Include="gf2n.cpp" />
+    <ClCompile Include="gf2n_simd.cpp" />
     <ClCompile Include="gfpcrypt.cpp" />
     <ClCompile Include="gost.cpp" />
     <ClCompile Include="gzip.cpp" />
@@ -252,7 +257,8 @@
     <ClCompile Include="kalyna.cpp" />
     <ClCompile Include="kalynatab.cpp" />
     <ClCompile Include="keccak.cpp" />
-    <ClCompile Include="keccakc.cpp" />
+    <ClCompile Include="keccak_core.cpp" />
+    <ClCompile Include="keccak_simd.cpp" />
     <ClCompile Include="lea.cpp" />
     <ClCompile Include="lea_simd.cpp" />
     <ClCompile Include="luc.cpp" />
@@ -304,6 +310,7 @@
     <ClCompile Include="sha3.cpp" />
     <ClCompile Include="shacal2.cpp" />
     <ClCompile Include="shacal2_simd.cpp" />
+    <ClCompile Include="shake.cpp" />
     <ClCompile Include="shark.cpp" />
     <ClCompile Include="sharkbox.cpp" />
     <ClCompile Include="simeck.cpp" />
@@ -335,6 +342,7 @@
     <ClCompile Include="vmac.cpp" />
     <ClCompile Include="wake.cpp" />
     <ClCompile Include="whrlpool.cpp" />
+    <ClCompile Include="xed25519.cpp" />
     <ClCompile Include="xtr.cpp" />
     <ClCompile Include="xtrcrypt.cpp" />
     <ClCompile Include="zdeflate.cpp" />
@@ -399,6 +407,7 @@
     <ClInclude Include="cbcmac.h" />
     <ClInclude Include="ccm.h" />
     <ClInclude Include="chacha.h" />
+    <ClInclude Include="chachapoly.h" />
     <ClInclude Include="cham.h" />
     <ClInclude Include="channels.h" />
     <ClInclude Include="cmac.h" />
@@ -413,6 +422,10 @@
     <ClInclude Include="dh2.h" />
     <ClInclude Include="dmac.h" />
     <ClInclude Include="drbg.h" />
+    <ClInclude Include="donna.h" />
+    <ClInclude Include="donna_32.h" />
+    <ClInclude Include="donna_64.h" />
+    <ClInclude Include="donna_sse.h" />
     <ClInclude Include="dsa.h" />
     <ClInclude Include="eax.h" />
     <ClInclude Include="ec2n.h" />
@@ -449,7 +462,6 @@
     <ClInclude Include="iterhash.h" />
     <ClInclude Include="kalyna.h" />
     <ClInclude Include="keccak.h" />
-    <ClInclude Include="keccakc.h" />
     <ClInclude Include="lubyrack.h" />
     <ClInclude Include="lea.h" />
     <ClInclude Include="luc.h" />
@@ -503,6 +515,7 @@
     <ClInclude Include="sha.h" />
     <ClInclude Include="sha3.h" />
     <ClInclude Include="shacal2.h" />
+    <ClInclude Include="shake.h" />
     <ClInclude Include="shark.h" />
     <ClInclude Include="simple.h" />
     <ClInclude Include="simeck.h" />
@@ -529,6 +542,7 @@
     <ClInclude Include="wake.h" />
     <ClInclude Include="whrlpool.h" />
     <ClInclude Include="words.h" />
+    <ClInclude Include="xed25519.h" />
     <ClInclude Include="xtr.h" />
     <ClInclude Include="xtrcrypt.h" />
     <ClInclude Include="zdeflate.h" />

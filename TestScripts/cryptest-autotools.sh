@@ -106,14 +106,6 @@ if ! autoreconf 2>/dev/null; then
 	fi
 fi
 
-# Sparc need +w
-if [[ -e config.sub ]]; then
-	chmod +w config.sub
-fi
-if [[ -e config.guess ]]; then
-	chmod +w config.guess
-fi
-
 # Update config.sub config.guess. GNU recommends using the latest for all projects.
 echo "Updating config.sub"
 wget --no-check-certificate 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub' -O config.sub
@@ -141,13 +133,13 @@ if ! "$MAKE" -j2 -f Makefile; then
 	[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
 fi
 
-if ! ./cryptestcwd v; then
-	echo "cryptestcwd v failed."
+if ! ./cryptest v; then
+	echo "cryptest v failed."
 	[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
 fi
 
-if ! ./cryptestcwd tv all; then
-	echo "cryptestcwd tv all failed."
+if ! ./cryptest tv all; then
+	echo "cryptest tv all failed."
 	[[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
 fi
 
